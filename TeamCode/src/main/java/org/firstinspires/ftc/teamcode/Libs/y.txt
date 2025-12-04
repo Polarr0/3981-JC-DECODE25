@@ -1,0 +1,221 @@
+package org.firstinspires.ftc.teamcode;
+
+import static org.firstinspires.ftc.teamcode.Libs.JCLibs.lerp;
+
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
+
+import org.firstinspires.ftc.teamcode.Libs.Classes.GameController;
+import org.firstinspires.ftc.teamcode.Libs.PlayOpMode;
+
+import java.util.concurrent.Callable;
+
+@TeleOp(name="Basic Tank", group="demo")
+public class demo extends PlayOpMode {
+    HardwareMap map;
+    //Class Ref
+    drivetrain d = new drivetrain();
+    lift l = new lift();
+    Sensor S = new Sensor();
+    //Controller
+    Gamepad current;
+    Gamepad previous;
+    double lsx;
+    double rsx;
+    double lsy;
+    boolean up;
+    boolean down;
+    boolean left;
+    boolean right;
+    double RT;
+    double LT;
+    boolean a;
+    boolean b;
+    //VARIABLES
+    double threshold;
+    double threshold_;
+    double trs;
+    double lsx_lerped = 0;
+    double rsx_lerped = 0;
+    double lsy_lerped = 0;
+    double  Angle2;
+    double rpower;
+    int op;
+    double Min;
+    double Max;
+    double Offset = 4390;
+    int Value;
+    int Dangle;
+    boolean Intake;
+    boolean Speed;
+    boolean Drive;
+    double Speed1 = 0.6;
+    double Speed2  =1;
+    @Override
+    protected void preinitilize()
+    {
+        isTeleOp = true;
+    }
+
+
+    @Override
+    protected void initialize() {
+        map = hardwareMap;
+
+        l.init(map);
+        d.init(map);
+
+        S.init(map);
+        //Drive Train Motor Setup
+        d.initializeMotor(d.LB, DcMotor.Direction.REVERSE);
+        d.initializeMotor(d.LF, DcMotor.Direction.FORWARD);
+        d.initializeMotor(d.RF, DcMotor.Direction.FORWARD);
+        d.initializeMotor(d.RB, DcMotor.Direction.REVERSE);
+        //Arm Motor Setup
+        l.initializeEncoderMotor(l.DC1);
+        l.initializeEncoderMotor(l.DC2);
+
+         current = new Gamepad();
+
+
+         previous = new Gamepad();
+
+
+
+        l.m1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        l.m1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        Min = l.DC1.getCurrentPosition();
+        Max = Min + Offset;
+
+
+    }
+    // so switch case dont take over run
+    void SwitchCase(){
+
+
+        switch (Drive ? 1:0) {
+            case 0:
+                switch (Speed ? 1 : 0) {
+                    case 0://false
+                        d.move(lsy_lerped * Speed1, lsx_lerped * Speed1, rsx_lerped * Speed1);
+                        break;
+
+                    case 1://true
+                        d.move(lsy_lerped * Speed2, lsx_lerped * Speed2, rsx_lerped * Speed2);
+                        break;
+                }
+                break;
+            case 1:
+                d.move(lsy_lerped * 0, lsx_lerped * 0, rsx_lerped * 0);
+                telemetry.speak("Click L3 Genius ");
+                break;
+        }
+    }
+
+    //Place any telemetry data in function
+    void Telemetry(){
+        telemetry.addData("CP1", l.DC1.getCurrentPosition());
+        telemetry.addData("CP2",l.DC2.getCurrentPosition());
+        telemetry.addData("Block", S.Color);
+        telemetry.addData("Color", S.CurrentC);
+        telemetry.addData("Red", S.Red);
+        telemetry.addData("Blue", S.Blue);
+        telemetry.addData("Green", S.Green);
+        telemetry.addData("Yellow: ",S.Yellow);
+        telemetry.addData("Current Value",Value);
+        telemetry.addData("Avg C: ",S.AVG);
+        telemetry.addData("Team: ",S.Team);
+        telemetry.update();
+    }
+    //Assigns controller inputs to variable
+    void Controller(Gamepad gamepaD){
+        //Thump sticks
+        lsy = gamepaD.left_stick_y;
+        rsx = -gamepaD.right_stick_x;
+        lsx = -gamepaD.left_stick_x;
+        //Dpad
+        up = gamepaD.dpad_up;
+        down = gamepaD.dpad_down;
+        left = gamepaD.dpad_left;
+        right = gamepaD.dpad_right;
+        //Face buttons
+        a = gamepaD.a;
+        b = gamepaD.b;
+        RT = gamepaD.right_trigger;
+        LT = gamepaD.left_trigger;
+        previous.copy(current);
+
+
+        // Store the gamepad values from this loop iteration in
+        // currentGamepad1/2 to be used for the entirety of this loop iteration.
+        // This prevents the gamepad values from changing between being
+        // used and stored in previousGamepad1/2.
+        current.copy(gamepaD);
+
+    }
+    @Override
+    protected void run(double dt) throws InterruptedException {
+
+        Controller(gamepad1);
+        threshold = 0.8;
+        threshold_ = 1;
+        trs = 1;
+        op = 1000;
+
+        rpower = LT - RT;
+        l.m1.setPower(rpower);
+
+        lsx_lerped = lerp(lsx_lerped, lsx, 0.9);
+        rsx_lerped = lerp(rsx_lerped, rsx, 0.9);
+        lsy_lerped = lerp(lsy_lerped, lsy, 0.9);
+        SwitchCase();
+
+
+        S.Sense();
+        Telemetry();
+        if(a)
+        {
+            Value += 50;
+        }
+        if(b)
+        {
+            Value -= 50
+        ;
+        }
+        //Vertical
+        if (up) {
+            l.Arm(5180,trs,2350,1);
+        }
+        //Down
+        if (down) {
+
+            l.Arm(2200,trs,3200,threshold);
+        }
+        //Reset to start position
+        if(left) {
+            l.Arm(0,trs,0,threshold);
+        }
+        // Rung 1 Part 1
+        if (right) {
+
+            l.Arm(3400,trs,2350,threshold);
+        }
+        if (gamepad1.left_bumper) {
+            S.Switch();
+        }
+
+        if (current.left_stick_button && !previous.left_stick_button) {
+           Speed =! Speed;
+        }
+        if (current.right_stick_button && !previous.right_stick_button) {
+            Drive =! Drive;
+        }
+
+
+    }
+}

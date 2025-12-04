@@ -18,8 +18,10 @@ public class MotorR extends PlayOpMode{
     double a2 = 0;
     //Vars
     double speed = 0.3;
+
+
     @Override
-    protected void preInitialize() {
+    protected void preinitilize() {
         isTeleOp = true;
         LBA = new MotorCupling();
     }
