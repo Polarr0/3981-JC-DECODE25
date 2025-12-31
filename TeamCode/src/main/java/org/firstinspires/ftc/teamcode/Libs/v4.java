@@ -9,9 +9,9 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
-@TeleOp(name = "v3", group = "leo")
+@TeleOp(name = "v4", group = "leo")
 
-public class v3 extends OpMode {
+public class v4 extends OpMode {
 
     DcMotor LeftM;
     DcMotor RightM;
@@ -24,12 +24,19 @@ public class v3 extends OpMode {
 
     boolean strf;
 
+    int roller = 0;
+    int rollerpos;
+
+
+
+
     double lylrp = 0;
     double rxlrp = 0;
 
     @Override
     public void init() {
         telemetry.addData("Status: ","Initializing Hardware....");
+
 
         //                ---------Motor Initializations--------
 
@@ -46,7 +53,11 @@ public class v3 extends OpMode {
 
         //B
         BackM = hardwareMap.get(DcMotor.class,"B");
-        BackM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        BackM.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        BackM.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+
+
 
         //Arm
         Arm = hardwareMap.get(DcMotor.class,"Arm");
@@ -96,10 +107,18 @@ public class v3 extends OpMode {
         telemetry.addData("Arm Pos: ", Arm.getTargetPosition());
         telemetry.addData("Arm Pwr: ", Arm.getPower());
         telemetry.addData("triggers: ", gamepad1.right_trigger);
-        telemetry.addData("R u Turning?: ", strf);
+        telemetry.addData("R u strf?: ", strf);
         telemetry.addData("Back ", BackM.getPower());
         telemetry.addData("arm2 ", Arm2.getCurrentPosition());
         telemetry.addData("svo ", svo.getPosition());
+        telemetry.addData("back pos: ", BackM.getCurrentPosition());
+        telemetry.addData("b mode: ", BackM.getMode());
+        telemetry.addData("b target: ", BackM.getTargetPosition());
+        telemetry.addData("b zm: ", BackM.getZeroPowerBehavior());
+        telemetry.addData("rollerpos: ", rollerpos);
+        telemetry.addData("roller: ", roller);
+
+
         telemetry.update();
     }
 
@@ -127,6 +146,27 @@ public class v3 extends OpMode {
         }
     }
 
+    public void turn(){
+
+        if (gamepad1.dpad_left) {
+            LeftM.setPower(.5);
+            RightM.setPower(-.5);
+            BackM.setPower(-.6);
+            BackM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+
+        } else if (gamepad1.dpad_right) {
+            LeftM.setPower(-.5);
+            RightM.setPower(.5);
+            BackM.setPower(.6);
+            BackM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        }
+
+
+
+    }
+
     //liffup
     public void liffup(int pos){
         Arm2.setTargetPosition(pos-100);
@@ -140,90 +180,63 @@ public class v3 extends OpMode {
 
     }
 
+    public void backcode(){
+        boolean test
+
+        if (gamepad1.triangle)
+
+        int bpos = BackM.getCurrentPosition();
+        int quotient = Math.abs(bpos/58);
+
+
+
+
+        if (bpos % 58 == 0){
+            roller = quotient;
+            rollerpos = bpos;
+
+        }
+
+        if (BackM.getPower() == 0){
+            BackM.setTargetPosition(rollerpos);
+            BackM.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            BackM.setPower(0.1);
+
+        }
+    }
+
+
+
     @Override
     public void loop() {
         lylrp = lerp(gamepad1.left_stick_y,lylrp,0.5);
+        rxlrp = lerp(gamepad1.right_stick_x,rxlrp,0.5);
+
         strf = gamepad1.right_stick_x != 0;
 
-        Arm.setPower(0);
+        backcode();
 
-        if(strf) {
-            if (gamepad1.right_stick_x > 0) {
-                rxlrp = lerp(gamepad1.right_stick_x, rxlrp, 0.5);
-                LeftM.setPower(-rxlrp);
-                BackM.setPower(-rxlrp);
-            }
 
-            if (gamepad1.right_stick_x < 0) {
-                rxlrp = lerp(gamepad1.right_stick_x, rxlrp, 0.5);
-                RightM.setPower(rxlrp);
-                BackM.setPower(-rxlrp);
-            }
+        if (strf) {
+            LeftM.setPower(rxlrp);
+            RightM.setPower(-rxlrp);
+            BackM.setPower(rxlrp);
+            BackM.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        }else {
-            BackM.setPower(0);
-            BackM.resetDeviceConfigurationForOpMode();
-            BackM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        }
 
-        if(!strf){
+        }else if (!strf) {
             //Forward and Reverse
 
             LeftM.setPower(lylrp);
             RightM.setPower(lylrp);
-
         }
 
+        BackM.setPower(0);
 
+        turn();
 
-
-        //Turn
-
-        if (gamepad1.dpad_left){
-            LeftM.setPower(.5);
-            RightM.setPower(-.5);
-            BackM.setPower(.6);
-            BackM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-
-        }else{
-            BackM.setPower(0);
-        }
-
-        if (gamepad1.dpad_right){
-            LeftM.setPower(-.5);
-            RightM.setPower(.5);
-            BackM.setPower(.6);
-
-            BackM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-        }else {
-            BackM.setPower(0);
-        }
-
-        //Arm code
-        if (gamepad1.dpad_up) {
-
-            Arm.setPower(-0.5);
-            Arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        } else {
-            gamepad1.dpad_up = false;
-        }
-
-        if (gamepad1.dpad_down) {
-
-            Arm.setPower(0.5);
-            Arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        } else {
-            gamepad1.dpad_up = false;
-        }
-
-
-
-
-
+        Arm.setPower(0);
+        arm();
 
         if (gamepad1.right_trigger > 0) {
             TR.setPower(gamepad1.right_trigger);
@@ -233,7 +246,14 @@ public class v3 extends OpMode {
             TR.setPower(0);
             TL.setPower(0);
         }
-        arm();
+
+        if (gamepad1.triangle) {
+
+            backcode();
+
+        }
+
+
         telem();
 
     }
